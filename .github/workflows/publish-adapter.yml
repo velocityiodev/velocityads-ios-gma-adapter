@@ -1,0 +1,410 @@
+name: Publish Adapter
+
+# ── Mediation-specific values ──────────────────────────────────────────────
+# When adding a new mediation adapter repo, copy this file and update only
+# the env block below. All other steps are mediation-agnostic.
+env:
+  PACKAGE_SCHEME: VelocityAdsGmaAdapter
+  PODSPEC: VelocityAdsGmaAdapter.podspec
+  # Path inside Sources/ that contains the Swift file with the version constant.
+  # grep reads: internal let velocityAds<Mediation>AdapterVersion = "x.y.z.a"
+  ADAPTER_VERSION_FILE: Sources/VelocityAdsGmaAdapter/AdapterVersion.swift
+  ADAPTER_DISPLAY_NAME: Velocity Ads GMA Adapter
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Adapter version to release — 4 segments, e.g. 0.10.0.0 (must match AdapterVersion.swift, podspec, and top CHANGELOG.md heading)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run: run all validation and tests but skip tag, GitHub Release, and CocoaPods push'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Job 1: Validate
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Validate release readiness
+    runs-on: macos-26
+    timeout-minutes: 10
+    env:
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Validate version format (4-segment semver)
+        run: |
+          set -euo pipefail
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "❌ Invalid version format: '$VERSION'"
+            echo "   Expected 4-segment semver, e.g. 0.10.0.0"
+            exit 1
+          fi
+          echo "✅ Version format valid: $VERSION"
+
+      - name: Enforce release branch
+        run: |
+          set -euo pipefail
+          EXPECTED_BRANCH="release/${VERSION}"
+          if [ "${GITHUB_REF_NAME}" != "$EXPECTED_BRANCH" ]; then
+            echo "❌ Releases must be dispatched from branch '$EXPECTED_BRANCH'"
+            echo "   Got: '${GITHUB_REF_NAME}'"
+            exit 1
+          fi
+          echo "✅ Dispatch branch: $EXPECTED_BRANCH"
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Check AdapterVersion.swift
+        run: |
+          set -euo pipefail
+          # Match: internal let velocityAds<X>AdapterVersion = "x.y.z.a"
+          SWIFT_VERSION=$(grep -Eo '"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"' "$ADAPTER_VERSION_FILE" | tr -d '"')
+          if [ "$SWIFT_VERSION" != "$VERSION" ]; then
+            echo "❌ AdapterVersion.swift mismatch"
+            echo "   Expected : $VERSION"
+            echo "   Found    : $SWIFT_VERSION"
+            exit 1
+          fi
+          echo "✅ AdapterVersion.swift: $SWIFT_VERSION"
+
+      - name: Check podspec s.version
+        run: |
+          set -euo pipefail
+          # Podspecs commonly use single quotes (Ruby); accept either quote style.
+          POD_VERSION=$(grep -E '^\s*s\.version\s*=' "$PODSPEC" | grep -Eo "['\"][^'\"]+['\"]" | tr -d "'\"")
+          if [ "$POD_VERSION" != "$VERSION" ]; then
+            echo "❌ Podspec version mismatch"
+            echo "   Expected : $VERSION"
+            echo "   Found    : $POD_VERSION"
+            exit 1
+          fi
+          echo "✅ Podspec s.version: $POD_VERSION"
+
+      - name: Check CHANGELOG.md top entry
+        run: |
+          set -euo pipefail
+          # Keep a Changelog: "## [0.10.0.0] - 2026-09-07"
+          TOP_ENTRY=$(grep -m1 '^## \[' CHANGELOG.md | sed -E 's/^## \[([^]]+)\].*/\1/')
+          if [ "$TOP_ENTRY" != "$VERSION" ]; then
+            echo "❌ CHANGELOG.md top entry mismatch"
+            echo "   Expected : $VERSION"
+            echo "   Found    : $TOP_ENTRY"
+            exit 1
+          fi
+          echo "✅ CHANGELOG.md top entry: $TOP_ENTRY"
+
+      - name: Duplicate tag guard
+        run: |
+          set -euo pipefail
+          # CocoaPods uses the 4-segment tag; SPM uses the encoded integer tag.
+          # Check both so a partial re-run cannot create a duplicate.
+          IFS='.' read -r A B C D <<< "$VERSION"
+          ENCODED=$(printf "%d%02d%02d%02d" "$A" "$B" "$C" "$D" | sed 's/^0*//')
+          ENCODED="${ENCODED:-0}"
+          SPM_TAG="${ENCODED}.0.0"
+          if git ls-remote --tags origin | grep -q "refs/tags/${VERSION}$"; then
+            echo "❌ Tag $VERSION already exists on origin. Did you forget to bump the version?"
+            exit 1
+          fi
+          if git ls-remote --tags origin | grep -q "refs/tags/${SPM_TAG}$"; then
+            echo "❌ Encoded SPM tag $SPM_TAG already exists on origin."
+            exit 1
+          fi
+          echo "✅ Tags $VERSION and $SPM_TAG do not yet exist"
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Test
+  # Full simulator test pass — same as CI.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Build & Test
+    runs-on: macos-26
+    needs: validate
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Resolve Swift package dependencies
+        run: swift package resolve
+
+      - name: Select iOS Simulator
+        id: select-sim
+        run: |
+          available=$(xcrun simctl list devices available)
+          selected=""
+          for candidate in "iPhone 17 Pro" "iPhone 17" "iPhone 16 Pro" "iPhone 16" "iPhone 15 Pro" "iPhone 15"; do
+            if echo "$available" | grep -qE "^[[:space:]]*${candidate} \("; then
+              selected="$candidate"
+              break
+            fi
+          done
+          if [ -z "$selected" ]; then
+            echo "::error::No preferred iPhone simulator available."
+            echo "$available"
+            exit 1
+          fi
+          echo "device=$selected" >> "$GITHUB_OUTPUT"
+
+      - name: Install xcbeautify
+        run: brew list xcbeautify &>/dev/null || brew install xcbeautify
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          NSUnbufferedIO=YES xcodebuild test \
+            -scheme "${{ env.PACKAGE_SCHEME }}" \
+            -destination "platform=iOS Simulator,name=${{ steps.select-sim.outputs.device }}" \
+            -resultBundlePath TestResults.xcresult \
+            -maximum-test-execution-time-allowance 120 \
+            2>&1 | xcbeautify --disable-colored-output | awk '!seen[$0]++' | sed -e 's/^##\[error\]//' -e 's/^::error[^:]*:://'
+        env:
+          OS_ACTIVITY_MODE: disable
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Job 3: Pod lint
+  # Validates the podspec against the real published VelocityAdsSDK and
+  # Google-Mobile-Ads-SDK pods using the local Sources/ tree. Must use `pod lib lint`
+  # (not `pod spec lint`) because the version git tag does not exist yet —
+  # tagging happens in the later tag-and-release job.
+  # ---------------------------------------------------------------------------
+  pod-lint:
+    name: Pod lint
+    runs-on: macos-26
+    needs: validate
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods --no-document --user-install
+          echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
+
+      - name: Lint podspec
+        # --allow-warnings: upstream pods occasionally ship with warnings;
+        # our linter should not fail on upstream issues.
+        # --skip-tests: we run tests in the test job above; pod lint's test
+        # scheme discovery is less reliable than xcodebuild's.
+        run: pod lib lint "${{ env.PODSPEC }}" --allow-warnings --skip-tests
+
+  # ---------------------------------------------------------------------------
+  # Job 4: Tag, GitHub Release, and CocoaPods push
+  # Skipped on dry runs.
+  # The pod is source-based: tagging the repo IS the release.
+  # Two tags are created: the 4-segment tag for CocoaPods, and an encoded
+  # integer SPM tag (SPM only accepts 3-segment semver).
+  # ---------------------------------------------------------------------------
+  tag-and-release:
+    name: Tag and Release
+    runs-on: macos-26
+    needs: [test, pod-lint]
+    if: ${{ !inputs.dry_run }}
+    # Require a protected GitHub Environment with required reviewers configured
+    # in Settings → Environments → production-release before the first real publish.
+    environment: production-release
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          missing=""
+          [ -z "$GPG_PRIVATE_KEY" ]         && missing="$missing GPG_PRIVATE_KEY"
+          [ -z "$GPG_TAGGER_NAME" ]         && missing="$missing GPG_TAGGER_NAME"
+          [ -z "$GPG_TAGGER_EMAIL" ]        && missing="$missing GPG_TAGGER_EMAIL"
+          [ -z "$GPG_SIGNING_KEY_ID" ]      && missing="$missing GPG_SIGNING_KEY_ID"
+          [ -z "$COCOAPODS_TRUNK_TOKEN" ]   && missing="$missing COCOAPODS_TRUNK_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "❌ Missing required secrets:$missing"
+            exit 1
+          fi
+          if [ -z "${GPG_PASSPHRASE:-}" ]; then
+            echo "⚠️ GPG_PASSPHRASE is empty — OK only if the signing key has no passphrase"
+          fi
+          echo "✅ All required secrets present"
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          GPG_TAGGER_NAME: ${{ secrets.GPG_TAGGER_NAME }}
+          GPG_TAGGER_EMAIL: ${{ secrets.GPG_TAGGER_EMAIL }}
+          GPG_SIGNING_KEY_ID: ${{ secrets.GPG_SIGNING_KEY_ID }}
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+
+      - name: Install gnupg
+        run: brew list gnupg &>/dev/null || brew install gnupg
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          GNUPGHOME=$(mktemp -d)
+          chmod 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "pinentry-mode loopback"  >> "$GNUPGHOME/gpg.conf"
+          echo "allow-loopback-pinentry" >> "$GNUPGHOME/gpg-agent.conf"
+          GNUPGHOME="$GNUPGHOME" gpgconf --kill gpg-agent
+          echo "$GPG_PRIVATE_KEY" | GNUPGHOME="$GNUPGHOME" gpg --batch \
+            --passphrase "${GPG_PASSPHRASE:-}" --import
+
+      - name: Create and push tags
+        env:
+          GPG_TAGGER_NAME: ${{ secrets.GPG_TAGGER_NAME }}
+          GPG_TAGGER_EMAIL: ${{ secrets.GPG_TAGGER_EMAIL }}
+          GPG_SIGNING_KEY_ID: ${{ secrets.GPG_SIGNING_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          # Write a gpg wrapper so every git-invoked gpg call passes the
+          # passphrase non-interactively, regardless of agent state.
+          GPG_WRAPPER=$(mktemp)
+          chmod +x "$GPG_WRAPPER"
+          printf '#!/bin/sh\nexec gpg --batch --yes --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE:-}" "$@"\n' > "$GPG_WRAPPER"
+
+          git config user.name  "${GPG_TAGGER_NAME}"
+          git config user.email "${GPG_TAGGER_EMAIL}"
+          git config user.signingkey "${GPG_SIGNING_KEY_ID}"
+          git config gpg.program "$GPG_WRAPPER"
+          git config tag.gpgsign true
+
+          # 4-segment tag: used by CocoaPods trunk and the GitHub Release anchor.
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "⚠️ Tag $VERSION already exists — skipping"
+          else
+            git tag -s "$VERSION" -m "$VERSION"
+            git push origin "$VERSION"
+            echo "✅ Pushed tag $VERSION"
+          fi
+
+          # Encoded SPM tag: SPM only accepts 3-segment semver.
+          # Encoding: each segment zero-padded to 2 digits, concatenated, leading zeros stripped.
+          # e.g.  0.10.0.0 → 00100000 → 100000 → 100000.0.0
+          #       0.10.0.1 → 00100001 → 100001 → 100001.0.0
+          #       1.0.0.0  → 01000000 → 1000000 → 1000000.0.0
+          IFS='.' read -r A B C D <<< "$VERSION"
+          ENCODED=$(printf "%d%02d%02d%02d" "$A" "$B" "$C" "$D" | sed 's/^0*//')
+          ENCODED="${ENCODED:-0}"
+          SPM_TAG="${ENCODED}.0.0"
+          echo "SPM_TAG=$SPM_TAG" >> "$GITHUB_ENV"
+          if git rev-parse "$SPM_TAG" >/dev/null 2>&1; then
+            echo "⚠️ Encoded SPM tag $SPM_TAG already exists — skipping"
+          else
+            git tag -s "$SPM_TAG" -m "SPM tag for adapter $VERSION"
+            git push origin "$SPM_TAG"
+            echo "✅ Pushed encoded SPM tag $SPM_TAG"
+          fi
+
+      - name: Extract CHANGELOG entry for this version
+        run: |
+          set -euo pipefail
+          # Keep a Changelog: "## [<version>] - <date>"
+          awk "/^## \\[${VERSION}\\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "Release $VERSION" > /tmp/release-notes.md
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TITLE="${{ env.ADAPTER_DISPLAY_NAME }} ${VERSION}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+          {
+            echo "## ${{ env.ADAPTER_DISPLAY_NAME }} ${VERSION}"
+            echo ""
+            echo "### Swift Package Manager"
+            echo ""
+            echo "Set the Dependency Rule to **Exact Version** and enter the encoded tag:"
+            echo '```'
+            echo "${SPM_TAG}"
+            echo '```'
+            echo "Or in \`Package.swift\`:"
+            echo '```swift'
+            echo ".package(url: \"${REPO_URL}\", exact: \"${SPM_TAG}\")"
+            echo '```'
+            echo ""
+            echo "> Encoding: adapter \`${VERSION}\` → \`${SPM_TAG}\` (each segment zero-padded to 2 digits, concatenated)."
+            echo ""
+            echo "### CocoaPods"
+            echo '```ruby'
+            echo "pod '${{ env.PACKAGE_SCHEME }}', '${VERSION}'"
+            echo '```'
+            echo ""
+            echo "### What's changed"
+            echo ""
+            cat /tmp/release-notes.md
+            echo ""
+            echo "### Links"
+            echo "- [CHANGELOG](${REPO_URL}/blob/${VERSION}/CHANGELOG.md)"
+          } > /tmp/gh-release-notes.md
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "⚠️ GitHub Release $VERSION already exists — skipping"
+          else
+            gh release create "$VERSION" \
+              --title "$TITLE" \
+              --notes-file /tmp/gh-release-notes.md
+          fi
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods --no-document --user-install
+          echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
+
+      - name: Push podspec to CocoaPods trunk
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+        run: |
+          set -euo pipefail
+          pod trunk push "${{ env.PODSPEC }}" --allow-warnings
+
+      - name: Remove GPG key
+        if: always()
+        run: |
+          [ -n "${GNUPGHOME:-}" ] || exit 0
+          gpgconf --kill gpg-agent || true
+          rm -rf "$GNUPGHOME"

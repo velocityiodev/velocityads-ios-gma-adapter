@@ -1,0 +1,117 @@
+name: Unit Tests
+
+# ── Mediation-specific values ──────────────────────────────────────────────
+# When adding a new mediation adapter repo, copy this file and update only
+# the env block below. All other steps are mediation-agnostic.
+env:
+  PACKAGE_SCHEME: VelocityAdsGmaAdapter
+  PODSPEC: VelocityAdsGmaAdapter.podspec
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# NOTE: This workflow depends on the `velocityads-ios-sdk` 0.10.0 tag existing
+# on the public repo and on `swift-package-manager-google-mobile-ads`. CI will fail until the
+# matching SDK version is published. Gate merges manually until then.
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: macos-26
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install SwiftLint
+        run: brew list swiftlint &>/dev/null || brew install swiftlint
+
+      - name: Run SwiftLint
+        run: swiftlint lint --strict --reporter github-actions-logging
+
+  test:
+    name: Build & Test
+    runs-on: macos-26
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve Swift package dependencies
+        run: swift package resolve
+
+      - name: Select iOS Simulator
+        id: select-sim
+        run: |
+          available=$(xcrun simctl list devices available)
+          selected=""
+          for candidate in "iPhone 17 Pro" "iPhone 17" "iPhone 16 Pro" "iPhone 16" "iPhone 15 Pro" "iPhone 15"; do
+            if echo "$available" | grep -qE "^[[:space:]]*${candidate} \("; then
+              selected="$candidate"
+              break
+            fi
+          done
+          if [ -z "$selected" ]; then
+            echo "::error::No preferred iPhone simulator available on this runner image."
+            echo "$available"
+            exit 1
+          fi
+          echo "Selected simulator: $selected"
+          echo "device=$selected" >> "$GITHUB_OUTPUT"
+
+      - name: Install xcbeautify
+        run: brew list xcbeautify &>/dev/null || brew install xcbeautify
+
+      - name: Build and run unit tests
+        run: |
+          set -o pipefail
+          NSUnbufferedIO=YES xcodebuild test \
+            -scheme "${{ env.PACKAGE_SCHEME }}" \
+            -destination "platform=iOS Simulator,name=${{ steps.select-sim.outputs.device }}" \
+            -resultBundlePath TestResults.xcresult \
+            -maximum-test-execution-time-allowance 120 \
+            2>&1 | xcbeautify --disable-colored-output | awk '!seen[$0]++' | sed -e 's/^##\[error\]//' -e 's/^::error[^:]*:://'
+        env:
+          OS_ACTIVITY_MODE: disable
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results
+          path: TestResults.xcresult
+          retention-days: 7
+
+      - name: Publish test summary
+        if: always()
+        run: |
+          if [ ! -d TestResults.xcresult ]; then
+            msg="⚠️ No test results bundle found — the test run may have failed before producing output."
+            echo "$msg"
+            echo "## Test Results" >> "$GITHUB_STEP_SUMMARY"
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          result_json=$(xcrun xcresulttool get test-results summary --path TestResults.xcresult)
+          summary=$(echo "$result_json" | jq -r '
+            "**Total:** \(.totalTestCount // "?") | **Passed:** \(.passedTests // "?") | **Failed:** \(.failedTests // "?") | **Skipped:** \(.skippedTests // "?")\n",
+            (if ((.failedTests // 0) > 0) then
+              "\n### ❌ Failed Tests\n",
+              ((.testFailures // [])[] | "- `\(.testName // "unknown")` — \(.failureText // "see details")")
+            else "✅ All tests passed" end)
+          ')
+          echo "## Test Results"
+          echo "$summary"
+          {
+            echo "## Test Results"
+            echo "$summary"
+          } >> "$GITHUB_STEP_SUMMARY"
