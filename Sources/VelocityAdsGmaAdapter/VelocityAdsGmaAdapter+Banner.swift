@@ -32,9 +32,13 @@ extension VelocityAdsGmaAdapter {
             }
 
             let request = VelocityBannerAdRequest.Builder(adUnitId: adUnitId, adSize: size).build()
+            // GADBannerView adds the mediated view as-is and does not size it; a zero frame
+            // renders nothing. Size it to the requested ad size up front, as Google's own
+            // sample custom event does.
+            let adView = VelocityBannerAdView(frame: CGRect(origin: .zero, size: cgSize(for: adConfiguration.adSize)))
             let mediationAd = VelocityGmaBannerAd(
                 ad: VelocityBannerAd(request),
-                adView: VelocityBannerAdView(),
+                adView: adView,
                 completionHandler: completionHandler
             )
             self.bannerAd = mediationAd
