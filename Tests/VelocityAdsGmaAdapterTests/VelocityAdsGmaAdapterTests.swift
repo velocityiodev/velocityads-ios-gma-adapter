@@ -185,6 +185,23 @@ final class VelocityAdsGmaAdapterTests: XCTestCase {
         XCTAssertEqual(VelocityAdsGmaAdapter.storedAppKey, "app-1")
     }
 
+    func test_load_withMismatchedAppKey_initializesWithTheFirstKeySeen() {
+        var capturedAppKeys: [String] = []
+        VelocityAdsGmaAdapter.initSDKRunnerForTesting = { [weak self] request, delegate in
+            capturedAppKeys.append(request.appKey)
+            self?.capturedInitDelegates.append(delegate)
+        }
+        VelocityAdsGmaAdapter.setUp(with: StubServerConfiguration(parameters: [Self.withAppKey])) { _ in }
+        drainMainQueue()
+        failInFlightInit()
+
+        VelocityAdsGmaAdapter().loadInterstitial(
+            for: StubInterstitialConfiguration(parameter: #"{"appKey":"app-other","adUnitId":"unit-1"}"#)
+        ) { _, _ in nil }
+
+        XCTAssertEqual(capturedAppKeys, ["app-1", "app-1"])
+    }
+
     func test_firstAppKey_returnsFirstNonBlankAcrossMappings() {
         let configuration = StubServerConfiguration(parameters: [
             nil,

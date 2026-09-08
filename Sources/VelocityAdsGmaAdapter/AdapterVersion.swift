@@ -7,8 +7,3 @@ internal let velocityAdsGmaAdapterVersion = "0.10.0.0"
 
 /// Mediation name reported to the Velocity SDK.
 internal let velocityAdsMediationName = "gma"
-
-internal extension String {
-    /// Returns `nil` when the string is empty, `self` otherwise.
-    var nilIfEmpty: String? { isEmpty ? nil : self }
-}

@@ -48,6 +48,7 @@ struct VelocityAdsServerParameters: Equatable {
 
     private static func nonBlank(_ value: Any?) -> String? {
         guard let string = value as? String else { return nil }
-        return string.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

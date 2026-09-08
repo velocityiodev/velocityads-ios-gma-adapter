@@ -69,11 +69,14 @@ extension VelocityAdsGmaAdapter {
         return nil
     }
 
+    /// Records `appKey` and returns the key every init attempt must use: the first key ever
+    /// seen. A later, different key is logged once and ignored.
     @MainActor
-    static func rememberAppKey(_ appKey: String) {
+    @discardableResult
+    static func rememberAppKey(_ appKey: String) -> String {
         guard let previous = storedAppKey else {
             storedAppKey = appKey
-            return
+            return appKey
         }
         if previous != appKey, !appKeyMismatchLogged {
             appKeyMismatchLogged = true
@@ -82,6 +85,7 @@ extension VelocityAdsGmaAdapter {
                     + "Use one Velocity app key per application process."
             )
         }
+        return previous
     }
 
     // MARK: - Init helpers
@@ -104,10 +108,7 @@ extension VelocityAdsGmaAdapter {
             return
         }
 
-        if let loadAppKey = parameters.appKey {
-            rememberAppKey(loadAppKey)
-        }
-        guard let appKey = parameters.appKey ?? storedAppKey else {
+        guard let appKey = parameters.appKey.map(rememberAppKey) ?? storedAppKey else {
             completion(false)
             return
         }

@@ -60,7 +60,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         // itself, or the key arrives at load time. Report success so the Google Mobile Ads
         // SDK's own initialization is never blocked; ensureInitialized() performs the real
         // SDK init lazily on the first load.
-        guard let appKey = firstAppKey(in: configuration) else {
+        guard let configuredAppKey = firstAppKey(in: configuration) else {
             completionHandler(nil)
             return
         }
@@ -68,7 +68,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         // Adapters are set up on a background queue; the coalescer and the Velocity init
         // delegate are main-actor-confined.
         runOnMainNow {
-            rememberAppKey(appKey)
+            let appKey = rememberAppKey(configuredAppKey)
             if VelocityAds.isInitialized() {
                 completionHandler(nil)
                 return

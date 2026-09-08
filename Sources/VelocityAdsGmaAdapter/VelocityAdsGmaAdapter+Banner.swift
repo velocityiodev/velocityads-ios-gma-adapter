@@ -92,7 +92,7 @@ final class VelocityGmaBannerAd: NSObject, @preconcurrency MediationBannerAd {
 
     private let ad: VelocityBannerAd
     private let adView: VelocityBannerAdView
-    private var delegate: VelocityBannerAdapterDelegate?
+    private(set) var delegate: VelocityBannerAdapterDelegate?
 
     init(ad: VelocityBannerAd, adView: VelocityBannerAdView, completionHandler: @escaping GADMediationBannerLoadCompletionHandler) {
         self.ad = ad

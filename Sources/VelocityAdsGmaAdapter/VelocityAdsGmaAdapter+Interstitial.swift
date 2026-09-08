@@ -50,7 +50,7 @@ extension VelocityAdsGmaAdapter {
 final class VelocityGmaInterstitialAd: NSObject, @preconcurrency MediationInterstitialAd {
 
     private let ad: VelocityInterstitialAd
-    private var delegate: VelocityInterstitialAdapterDelegate?
+    private(set) var delegate: VelocityInterstitialAdapterDelegate?
 
     /// Called once the creative has been released so the owning adapter can drop its reference.
     var onAdFinished: (@MainActor () -> Void)?
