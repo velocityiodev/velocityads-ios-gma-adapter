@@ -29,9 +29,12 @@ extension VelocityAdsGmaAdapter {
 
     /// The app key captured from the first sighting, used as a fallback for load-time
     /// init attempts whose parameter carries only an ad unit ID. First-wins: Velocity
-    /// init is process-global, so later mismatched keys are ignored.
+    /// init is process-global, so later mismatched keys are logged and ignored.
     @MainActor
     private(set) static var storedAppKey: String?
+
+    @MainActor
+    private static var appKeyMismatchLogged = false
 
     #if DEBUG
     /// Test-only: replaces the `VelocityAds.initSDK` trigger so unit tests can
@@ -48,6 +51,7 @@ extension VelocityAdsGmaAdapter {
         }
         activeInitBridge = nil
         storedAppKey = nil
+        appKeyMismatchLogged = false
         initSDKRunnerForTesting = nil
     }
     #endif
@@ -67,8 +71,16 @@ extension VelocityAdsGmaAdapter {
 
     @MainActor
     static func rememberAppKey(_ appKey: String) {
-        if storedAppKey == nil {
+        guard let previous = storedAppKey else {
             storedAppKey = appKey
+            return
+        }
+        if previous != appKey, !appKeyMismatchLogged {
+            appKeyMismatchLogged = true
+            AdapterLog.warn(
+                "Velocity Ads: multiple appKey values detected across custom event parameters. "
+                    + "Use one Velocity app key per application process."
+            )
         }
     }
 
@@ -157,11 +169,8 @@ extension VelocityAdsGmaAdapter {
 
     // MARK: - Mediation info
 
-    /// One-shot forwarding of the mediation environment to the Velocity SDK.
-    ///
-    /// Executed at most once per process — the values (mediation name, adapter
-    /// version, Google Mobile Ads SDK version) never change mid-session. The
-    /// `static let` closure gives thread-safe once semantics for free.
+    /// One-shot forwarding of the mediation environment to the Velocity SDK. The `static let`
+    /// closure gives thread-safe once semantics for free.
     private static let mediationInfoForwardingToken: Void = {
         VelocityAdsMediationBridge.setMediationInfo(
             name: velocityAdsMediationName,
@@ -170,8 +179,7 @@ extension VelocityAdsGmaAdapter {
         )
     }()
 
-    /// Reports the mediation environment to the Velocity SDK. Safe to call
-    /// from any adapter entry point; only the first call has an effect.
+    /// Reports the mediation environment to the Velocity SDK. Idempotent; safe from any entry point.
     static func forwardMediationInfo() {
         _ = mediationInfoForwardingToken
     }

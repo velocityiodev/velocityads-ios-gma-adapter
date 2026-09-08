@@ -128,7 +128,7 @@ VelocityAds.setDoNotSell(true) // user opted out of sale of personal data
 Load and show failures are surfaced as standard `NSError` values:
 
 - Errors raised by the Velocity SDK use the domain `io.velocityads.sdk`. The error code is the closest `RequestError` category (no fill, network, invalid request, internal); the original Velocity error code and message are attached as `NSUnderlyingErrorKey` and are visible in Ad Inspector.
-- Errors detected by the adapter itself (missing configuration, SDK not initialized, ad not ready, unsupported size) use the domain `io.velocityads.gma`.
+- Errors detected by the adapter itself (missing configuration, SDK not initialized, ad not ready, unsupported size, adapter released) use the domain `io.velocityads.gma`.
 
 ## How it works
 

@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
 
   s.homepage         = 'https://github.com/velocityiodev/velocityads-ios-gma-adapter'
   s.license          = { :type => 'Apache-2.0', :file => 'LICENSE' }
-  s.author           = { 'Velocity Ads' => 'sdk@velocityads.io' }
+  s.author           = { 'Velocity Ads' => 'sdk@velocity.io' }
 
   # Both the CocoaPods release tag and the pod version are the full 4-segment
   # version — the release workflow creates a 4-segment git tag (e.g. 0.10.0.0)

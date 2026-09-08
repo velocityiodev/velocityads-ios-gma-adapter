@@ -41,7 +41,7 @@ final class VelocityRewardedAdapterDelegate: NSObject, VelocityRewardedAdDelegat
 
     func onAdLoaded(ad: any VelocityFullscreenAd) {
         guard let mediationAd else {
-            _ = completionHandler?(nil, VelocityAdsErrorMapper.adNotReady())
+            _ = completionHandler?(nil, VelocityAdsErrorMapper.adapterReleased())
             completionHandler = nil
             return
         }

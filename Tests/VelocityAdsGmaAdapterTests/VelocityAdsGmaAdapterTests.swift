@@ -177,6 +177,14 @@ final class VelocityAdsGmaAdapterTests: XCTestCase {
         XCTAssertEqual(VelocityAdsGmaAdapter.storedAppKey, "app-1")
     }
 
+    func test_rememberAppKey_keepsTheFirstKeyWhenALaterMappingDisagrees() {
+        VelocityAdsGmaAdapter.rememberAppKey("app-1")
+        VelocityAdsGmaAdapter.rememberAppKey("app-2")
+        VelocityAdsGmaAdapter.rememberAppKey("app-3")
+
+        XCTAssertEqual(VelocityAdsGmaAdapter.storedAppKey, "app-1")
+    }
+
     func test_firstAppKey_returnsFirstNonBlankAcrossMappings() {
         let configuration = StubServerConfiguration(parameters: [
             nil,

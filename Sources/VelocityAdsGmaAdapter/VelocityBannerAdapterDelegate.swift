@@ -36,7 +36,7 @@ final class VelocityBannerAdapterDelegate: NSObject, VelocityBannerAdDelegate {
 
     func onAdLoaded(ad: VelocityBannerAd) {
         guard let mediationAd else {
-            _ = completionHandler?(nil, VelocityAdsErrorMapper.adNotReady())
+            _ = completionHandler?(nil, VelocityAdsErrorMapper.adapterReleased())
             completionHandler = nil
             return
         }
@@ -61,7 +61,8 @@ final class VelocityBannerAdapterDelegate: NSObject, VelocityBannerAdDelegate {
     }
 
     func onAdFailedToShow(ad: VelocityBannerAd, error: VelocityAdsError) {
-        // The banner contract has no post-load failure hook; the Google Mobile Ads SDK
-        // already holds the view. Nothing further to report.
+        // The Google Mobile Ads banner contract has no post-load failure hook — the SDK already
+        // holds the view — so the failure is only logged for diagnosis of a blank slot.
+        AdapterLog.warn("Velocity Ads banner failed to render [\(error.code)]: \(error.message)")
     }
 }

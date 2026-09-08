@@ -78,7 +78,8 @@ final class VelocityAdsErrorMapperTests: XCTestCase {
             (VelocityAdsErrorMapper.invalidServerParameters(), .invalidServerParameters),
             (VelocityAdsErrorMapper.sdkNotInitialized(), .sdkNotInitialized),
             (VelocityAdsErrorMapper.adNotReady(), .adNotReady),
-            (VelocityAdsErrorMapper.invalidAdSize("fluid"), .invalidAdSize)
+            (VelocityAdsErrorMapper.invalidAdSize("fluid"), .invalidAdSize),
+            (VelocityAdsErrorMapper.adapterReleased(), .adapterReleased)
         ]
         for (error, expected) in cases {
             XCTAssertEqual(error.domain, VelocityAdsErrorMapper.adapterDomain)

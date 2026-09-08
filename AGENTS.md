@@ -49,6 +49,7 @@ This package is the official Google Mobile Ads **custom event adapter** that bri
 velocityads-ios-gma-adapter/
 ├── Sources/VelocityAdsGmaAdapter/
 │ ├── AdapterVersion.swift # Version constant: velocityAdsGmaAdapterVersion
+│ ├── AdapterLog.swift # os_log wrapper for adapter warnings
 │ ├── VelocityAdsGmaAdapter.swift # Core adapter: MediationAdapter, setUp, versions, load entry points
 │ ├── VelocityAdsGmaAdapter+Init.swift # Init coalescing, app-key memory, mediation info
 │ ├── VelocityAdsGmaAdapter+Interstitial.swift # Interstitial load + VelocityGmaInterstitialAd (MediationInterstitialAd)

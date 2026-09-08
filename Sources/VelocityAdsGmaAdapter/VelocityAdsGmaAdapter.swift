@@ -49,8 +49,6 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         with configuration: MediationServerConfiguration,
         completionHandler: @escaping GADMediationAdapterSetUpCompletionBlock
     ) {
-        // Identify the mediation environment before SDK init so the very first
-        // request and event carry it.
         forwardMediationInfo()
 
         if VelocityAds.isInitialized() {
@@ -93,7 +91,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         VelocityAdsGmaAdapter.forwardMediationInfo()
         VelocityAdsGmaAdapter.runOnMainNow { [weak self] in
             guard let self else {
-                _ = completionHandler(nil, VelocityAdsErrorMapper.sdkNotInitialized())
+                _ = completionHandler(nil, VelocityAdsErrorMapper.adapterReleased())
                 return
             }
             self.loadInterstitialOnMain(for: adConfiguration, completionHandler: completionHandler)
@@ -107,7 +105,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         VelocityAdsGmaAdapter.forwardMediationInfo()
         VelocityAdsGmaAdapter.runOnMainNow { [weak self] in
             guard let self else {
-                _ = completionHandler(nil, VelocityAdsErrorMapper.sdkNotInitialized())
+                _ = completionHandler(nil, VelocityAdsErrorMapper.adapterReleased())
                 return
             }
             self.loadRewardedOnMain(for: adConfiguration, completionHandler: completionHandler)
@@ -121,7 +119,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         VelocityAdsGmaAdapter.forwardMediationInfo()
         VelocityAdsGmaAdapter.runOnMainNow { [weak self] in
             guard let self else {
-                _ = completionHandler(nil, VelocityAdsErrorMapper.sdkNotInitialized())
+                _ = completionHandler(nil, VelocityAdsErrorMapper.adapterReleased())
                 return
             }
             self.loadBannerOnMain(for: adConfiguration, completionHandler: completionHandler)

@@ -23,7 +23,7 @@ extension VelocityAdsGmaAdapter {
 
         VelocityAdsGmaAdapter.ensureInitialized(with: parameters) { [weak self] initialized in
             guard let self else {
-                _ = completionHandler(nil, VelocityAdsErrorMapper.sdkNotInitialized())
+                _ = completionHandler(nil, VelocityAdsErrorMapper.adapterReleased())
                 return
             }
             guard initialized else {

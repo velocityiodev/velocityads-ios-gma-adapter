@@ -5,8 +5,7 @@
 /// together when releasing.
 internal let velocityAdsGmaAdapterVersion = "0.10.0.0"
 
-/// Mediation name reported to the Velocity SDK via `VelocityAdsMediationBridge`.
-/// Owned by this adapter — the SDK accepts any lowercase canonical string.
+/// Mediation name reported to the Velocity SDK.
 internal let velocityAdsMediationName = "gma"
 
 internal extension String {

@@ -6,7 +6,8 @@ import VelocityAdsSDK
 ///
 /// Two error domains are used:
 /// - `adapterDomain` for conditions detected by the adapter itself (missing configuration,
-///   SDK not initialized, ad not ready, unsupported size). Codes are the `AdapterErrorCode` cases.
+///   SDK not initialized, ad not ready, unsupported size, adapter released). Codes are the
+///   `AdapterErrorCode` cases.
 /// - `sdkDomain` for errors raised by the Velocity SDK. The error code is the closest
 ///   `RequestError` category so AdMob reporting buckets it correctly; the original Velocity
 ///   code and message are preserved verbatim in `userInfo` (and as `NSUnderlyingErrorKey`)
@@ -31,6 +32,8 @@ enum VelocityAdsErrorMapper {
         case adNotReady = 103
         /// The requested banner size cannot be served by the Velocity SDK.
         case invalidAdSize = 104
+        /// The adapter instance was released by the Google Mobile Ads SDK before the load completed.
+        case adapterReleased = 105
     }
 
     // MARK: - Adapter-originated errors
@@ -55,6 +58,10 @@ enum VelocityAdsErrorMapper {
 
     static func invalidAdSize(_ description: String) -> NSError {
         adapterError(.invalidAdSize, "Velocity Ads: unsupported banner size \(description).")
+    }
+
+    static func adapterReleased() -> NSError {
+        adapterError(.adapterReleased, "Velocity Ads: the adapter was released before the ad finished loading.")
     }
 
     // MARK: - Velocity SDK errors

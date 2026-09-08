@@ -8,4 +8,5 @@
 - Interstitial, rewarded and banner ad formats, including MREC, leaderboard and adaptive banner sizes.
 - Automatic Velocity SDK initialization from the custom event parameter, with lazy initialization on first load when no app key is configured at startup.
 - Velocity SDK error codes and messages preserved on every reported error.
+- Banner render failures and mismatched app keys across mappings are reported through the unified logging system (`io.velocityads.gma`).
 - CocoaPods (`VelocityAdsGmaAdapter`) and Swift Package Manager distribution.
