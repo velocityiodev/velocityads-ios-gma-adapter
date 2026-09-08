@@ -88,7 +88,7 @@ extension VelocityAdsGmaAdapter {
 /// `VelocityBannerAdapterDelegate` for one load cycle. Main-actor-confined: both SDKs
 /// deliver every callback on the main thread.
 @MainActor
-final class VelocityGmaBannerAd: NSObject, @preconcurrency MediationBannerAd {
+final class VelocityGmaBannerAd: NSObject, MediationBannerAd {
 
     private let ad: VelocityBannerAd
     private let adView: VelocityBannerAdView
@@ -112,5 +112,10 @@ final class VelocityGmaBannerAd: NSObject, @preconcurrency MediationBannerAd {
 
     // MARK: MediationBannerAd
 
-    var view: UIView { adView }
+    /// Google's protocol is not actor-annotated, so the requirement is satisfied as
+    /// `nonisolated` and re-enters the main actor explicitly; the Google Mobile Ads SDK
+    /// reads the view on the main thread when it attaches the banner.
+    nonisolated var view: UIView {
+        MainActor.assumeIsolated { adView }
+    }
 }

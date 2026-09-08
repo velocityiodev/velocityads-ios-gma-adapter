@@ -47,7 +47,7 @@ extension VelocityAdsGmaAdapter {
 /// fails or the ad is dismissed. Main-actor-confined: both SDKs deliver every callback on
 /// the main thread.
 @MainActor
-final class VelocityGmaInterstitialAd: NSObject, @preconcurrency MediationInterstitialAd {
+final class VelocityGmaInterstitialAd: NSObject, MediationInterstitialAd {
 
     private let ad: VelocityInterstitialAd
     private(set) var delegate: VelocityInterstitialAdapterDelegate?
@@ -73,13 +73,19 @@ final class VelocityGmaInterstitialAd: NSObject, @preconcurrency MediationInters
 
     // MARK: MediationInterstitialAd
 
+    /// Google's protocol is not actor-annotated, so the requirement is satisfied as
+    /// `nonisolated` and re-enters the main actor explicitly; the Google Mobile Ads SDK
+    /// documents that it calls `present(from:)` on the main thread.
+    ///
     /// The view controller is deliberately not forwarded: the Velocity SDK's own
     /// topmost-view-controller resolution handles presentation.
-    func present(from viewController: UIViewController) {
-        guard ad.isReady else {
-            delegate?.eventDelegate?.didFailToPresentWithError(VelocityAdsErrorMapper.adNotReady())
-            return
+    nonisolated func present(from viewController: UIViewController) {
+        MainActor.assumeIsolated {
+            guard ad.isReady else {
+                delegate?.eventDelegate?.didFailToPresentWithError(VelocityAdsErrorMapper.adNotReady())
+                return
+            }
+            ad.show()
         }
-        ad.show()
     }
 }

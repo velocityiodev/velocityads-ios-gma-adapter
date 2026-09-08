@@ -15,7 +15,7 @@ Google Mobile Ads custom event adapter that wraps the **Velocity Ads iOS SDK** (
 | Dependency | Minimum version |
 |---|---|
 | iOS | 13.0 |
-| Xcode | 16.0 (Swift 6 toolchain) |
+| Swift | 5.9 |
 | Google Mobile Ads SDK | 13.0.0 |
 | VelocityAdsSDK | 0.10.0 |
 
