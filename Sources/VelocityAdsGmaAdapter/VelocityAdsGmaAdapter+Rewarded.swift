@@ -83,6 +83,9 @@ final class VelocityGmaRewardedAd: NSObject, MediationRewardedAd {
         MainActor.assumeIsolated {
             guard ad.isReady else {
                 delegate?.eventDelegate?.didFailToPresentWithError(VelocityAdsErrorMapper.adNotReady())
+                // Show can never succeed for this creative — release it so a stale loaded ad
+                // does not block the next request for this ad unit.
+                delegate?.onAdFinished?()
                 return
             }
             ad.show()

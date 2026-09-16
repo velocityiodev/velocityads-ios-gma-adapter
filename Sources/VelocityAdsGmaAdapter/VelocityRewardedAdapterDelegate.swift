@@ -25,8 +25,8 @@ final class VelocityRewardedAdapterDelegate: NSObject, VelocityRewardedAdDelegat
     /// Set once the Google Mobile Ads SDK accepts the loaded ad via the completion handler.
     private(set) var eventDelegate: MediationRewardedAdEventDelegate?
 
-    /// Called once the creative is no longer usable (load failed or the ad was dismissed)
-    /// so the owner can release it.
+    /// Called once the creative is no longer usable (load failed, show failed, or the ad was
+    /// dismissed) so the owner can release it.
     var onAdFinished: (@MainActor () -> Void)?
 
     init(
@@ -65,6 +65,9 @@ final class VelocityRewardedAdapterDelegate: NSObject, VelocityRewardedAdDelegat
 
     func onAdFailedToShow(ad: any VelocityFullscreenAd, error: VelocityAdsError) {
         eventDelegate?.didFailToPresentWithError(VelocityAdsErrorMapper.map(error))
+        // A failed show is terminal — no dismiss will follow — so release the creative here
+        // to avoid leaking a loaded Velocity ad into the next request for this ad unit.
+        onAdFinished?()
     }
 
     func onAdClicked(ad: any VelocityFullscreenAd) {
