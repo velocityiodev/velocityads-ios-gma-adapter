@@ -17,10 +17,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# NOTE: This workflow depends on the `velocityads-ios-sdk` 0.10.0 tag existing
-# on the public repo and on `swift-package-manager-google-mobile-ads`. CI will fail until the
-# matching SDK version is published. Gate merges manually until then.
-
 jobs:
   lint:
     name: Lint
