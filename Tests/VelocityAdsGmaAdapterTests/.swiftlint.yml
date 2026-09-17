@@ -1,0 +1,6 @@
+# Test-target overrides: force-unwraps are acceptable in test code
+# (fixtures and IUO test properties), unlike in the shipping adapter.
+parent_config: ../../.swiftlint.yml
+
+disabled_rules:
+  - force_unwrapping

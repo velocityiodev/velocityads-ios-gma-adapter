@@ -1,0 +1,64 @@
+# SwiftLint configuration for velocityads-ios-gma-adapter.
+# Mirrors the iOS SDK's .swiftlint.yml structure and rule set.
+# Run locally: swiftlint lint --strict (check) or swiftlint --fix && swiftlint lint --strict (fix + check)
+
+excluded:
+  - .build          # Swift Package Manager build artifacts and vendored checkouts
+
+disabled_rules:
+  - multiple_closures_with_trailing_closure  # conflicts with SwiftUI / Google Mobile Ads SDK trailing closure syntax
+
+# Adapter ships inside publisher apps — a force-unwrap crash is unacceptable.
+# Relaxed for Tests/ via the nested Tests/VelocityAdsGmaAdapterTests/.swiftlint.yml.
+opt_in_rules:
+  - force_unwrapping
+  - sorted_imports           # import order hygiene — matches iOS SDK convention
+  - empty_count              # prefer isEmpty over .count == 0
+  - closure_spacing          # consistent closure brace spacing
+  - first_where              # prefer .first(where:) over .filter { }.first
+
+force_unwrapping:
+  severity: error
+
+line_length:
+  warning: 200
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+# Google Mobile Ads SDK protocol callbacks use `ad` as the required parameter name — cannot rename.
+identifier_name:
+  min_length:
+    warning: 2
+    error: 2
+  max_length:
+    warning: 60
+    error: 60
+  allowed_symbols: ["_"]
+
+# VelocityAdsErrorMapper uses an exhaustive switch over all error codes — complexity is correct.
+cyclomatic_complexity:
+  warning: 25
+  error: 35
+
+# Format adapters are split across multiple extension files; individual files remain small.
+file_length:
+  warning: 500
+  error: 700
+
+type_body_length:
+  warning: 300
+  error: 500
+
+# ---------------------------------------------------------------------------
+# Custom rules — enforce adapter stability policy (mirrors iOS SDK AGENTS.md)
+# ---------------------------------------------------------------------------
+custom_rules:
+  no_app_terminating_calls:
+    included: ".*/Sources/VelocityAdsGmaAdapter/.*\\.swift$"
+    name: "No app-terminating calls in adapter code"
+    regex: "\\b(fatalError|preconditionFailure|assertionFailure|precondition|assert)\\s*\\("
+    message: >
+      Adapter shipping code must not terminate the host app.
+      Fail gracefully instead.
+    severity: error
