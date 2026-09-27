@@ -4,7 +4,7 @@
 
 ### Breaking Changes
 
-* **Minimum iOS version raised from 13.0 to 15.0**, matching Velocity Ads iOS SDK 0.11.0. Apps with a lower deployment target must raise it to 15.0 before upgrading; CocoaPods and Swift Package Manager will not resolve the adapter otherwise.
+* Raised minimum iOS deployment target to iOS 15.0.
 
 ### Changed
 
