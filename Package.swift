@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "VelocityAdsGmaAdapter",
     platforms: [
-        .iOS(.v13)
+        .iOS(.v15)
     ],
     products: [
         .library(

@@ -38,7 +38,7 @@ This package is the official Google Mobile Ads **custom event adapter** that bri
 - **Repository**: `velocityads-ios-gma-adapter` (public)
 - **Distribution**: CocoaPods trunk (`VelocityAdsGmaAdapter`) + Swift Package Manager (git tag)
 - **Version scheme**: 4-segment podspec version (`<sdkMajor>.<sdkMinor>.<sdkPatch>.<adapterBuild>`); two git tags per release — the **4-segment tag** (e.g. `0.10.0.0`) for CocoaPods and an **encoded SPM tag** (e.g. `100000.0.0`) for Swift Package Manager (SPM only accepts 3-segment semver; encoding: zero-pad each segment to 2 digits and concatenate)
-- **Minimum iOS**: 13.0
+- **Minimum iOS**: 15.0
 - **Supported Google Mobile Ads SDK**: 13.x
 
 ---
