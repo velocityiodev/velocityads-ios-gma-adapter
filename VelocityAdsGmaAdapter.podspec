@@ -27,7 +27,7 @@ Pod::Spec.new do |s|
   s.source_files     = 'Sources/VelocityAdsGmaAdapter/**/*.swift'
 
   s.dependency 'Google-Mobile-Ads-SDK', '>= 13.0.0', '< 14.0.0'
-  s.dependency 'VelocityAdsSDK', '~> 0.10.1'
+  s.dependency 'VelocityAdsSDK', '~> 0.11.0'
 
   # Google-Mobile-Ads-SDK ships as a static XCFramework.
   s.static_framework = true
