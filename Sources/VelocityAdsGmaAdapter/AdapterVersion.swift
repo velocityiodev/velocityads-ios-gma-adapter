@@ -3,7 +3,7 @@
 /// Four segments: the wrapped SDK's 3-segment semver plus a trailing adapter-build
 /// segment. `VelocityAdsGmaAdapter.podspec` must carry the same value — bump both
 /// together when releasing.
-internal let velocityAdsGmaAdapterVersion = "0.11.0.0"
+internal let velocityAdsGmaAdapterVersion = "0.12.0.0"
 
 /// Mediation name reported to the Velocity SDK.
 internal let velocityAdsMediationName = "gma"
