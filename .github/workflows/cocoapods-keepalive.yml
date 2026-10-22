@@ -10,7 +10,7 @@ on:
 jobs:
   keepalive:
     name: Keep CocoaPods Trunk Token Alive
-    runs-on: arc-runner-set-staging
+    runs-on: ubuntu-latest
 
     steps:
       - name: Install CocoaPods
