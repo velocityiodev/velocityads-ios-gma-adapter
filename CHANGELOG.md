@@ -1,13 +1,11 @@
 # Changelog
 
-## [0.12.0.0] - Unreleased
+## [0.12.0.0] - 2026-11-09
 
 ### Changed
 
 * Wraps Velocity Ads iOS SDK 0.12.0.
-* Supports Apple AdAttributionKit for eligible campaigns. Publishers must add
-  `rwn33vua23.adattributionkit` to the `AdNetworkIdentifiers` array in the host
-  app's `Info.plist`.
+* Added support for SKAdNetwork and AdAttributionKit. Action required: add Velocity’s IDs to `Info.plist` under `SKAdNetworkItems` and `AdNetworkIdentifiers`. See [SKAdNetwork](https://docs.velocity.io/ios/skadnetwork) for more info.
 
 ## [0.11.0.0] - 2026-10-04
 
