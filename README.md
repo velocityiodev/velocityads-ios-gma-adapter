@@ -17,7 +17,7 @@ Google Mobile Ads custom event adapter that wraps the **Velocity Ads iOS SDK** (
 | iOS | 15.0 |
 | Swift | 5.9 |
 | Google Mobile Ads SDK | 13.0.0 |
-| VelocityAdsSDK | 0.11.0 |
+| VelocityAdsSDK | 0.12.0 |
 
 ## Installation
 
@@ -27,8 +27,8 @@ Add both the adapter and its dependencies to your `Podfile`:
 
 ```ruby
 pod 'Google-Mobile-Ads-SDK', '>= 13.0.0', '< 14.0.0'
-pod 'VelocityAdsSDK',        '~> 0.11.0'
-pod 'VelocityAdsGmaAdapter', '0.11.0.0'
+pod 'VelocityAdsSDK',        '~> 0.12.0'
+pod 'VelocityAdsGmaAdapter', '0.12.0.0'
 ```
 
 Then run:
@@ -44,10 +44,7 @@ Tags are therefore **encoded** as integers: each segment is zero-padded to 2 dig
 
 | Adapter version | Encoded SPM tag |
 |---|---|
-| `0.11.0.0` | `110000.0.0` |
-| `0.10.1.0` | `100100.0.0` |
-| `0.10.1.1` | `100101.0.0` |
-| `1.0.0.0`  | `1000000.0.0` |
+| `0.12.0.0` | `120000.0.0` |
 
 Formula: `A` `BB` `CC` `DD` (each segment 2 digits, leading zeros on the whole number stripped) → `N.0.0`.
 
@@ -58,7 +55,7 @@ Formula: `A` `BB` `CC` `DD` (each segment 2 digits, leading zeros on the whole n
    https://github.com/velocityiodev/velocityads-ios-gma-adapter
    ```
 
-3. Set the Dependency Rule to **Exact Version** and enter the encoded tag from the [Releases](https://github.com/velocityiodev/velocityads-ios-gma-adapter/releases) page (e.g. `100100.0.0` for adapter `0.10.1.0`).
+3. Set the Dependency Rule to **Exact Version** and enter the encoded tag from the [Releases](https://github.com/velocityiodev/velocityads-ios-gma-adapter/releases) page (e.g. `120000.0.0` for adapter `0.12.0.0`).
 4. Add `VelocityAdsGmaAdapter` to your app target.
 
 The adapter declares its own SPM dependencies on `GoogleMobileAds` and `VelocityAdsSDK`, so they are pulled in automatically.
