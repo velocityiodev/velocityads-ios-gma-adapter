@@ -49,6 +49,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         with configuration: MediationServerConfiguration,
         completionHandler: @escaping GADMediationAdapterSetUpCompletionBlock
     ) {
+        forwardPrivacySettings()
         forwardMediationInfo()
 
         if VelocityAds.isInitialized() {
@@ -88,6 +89,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         for adConfiguration: MediationInterstitialAdConfiguration,
         completionHandler: @escaping GADMediationInterstitialLoadCompletionHandler
     ) {
+        VelocityAdsGmaAdapter.forwardPrivacySettings()
         VelocityAdsGmaAdapter.forwardMediationInfo()
         VelocityAdsGmaAdapter.runOnMainNow { [weak self] in
             guard let self else {
@@ -102,6 +104,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         for adConfiguration: MediationRewardedAdConfiguration,
         completionHandler: @escaping GADMediationRewardedLoadCompletionHandler
     ) {
+        VelocityAdsGmaAdapter.forwardPrivacySettings()
         VelocityAdsGmaAdapter.forwardMediationInfo()
         VelocityAdsGmaAdapter.runOnMainNow { [weak self] in
             guard let self else {
@@ -116,6 +119,7 @@ public final class VelocityAdsGmaAdapter: NSObject, MediationAdapter {
         for adConfiguration: MediationBannerAdConfiguration,
         completionHandler: @escaping GADMediationBannerLoadCompletionHandler
     ) {
+        VelocityAdsGmaAdapter.forwardPrivacySettings()
         VelocityAdsGmaAdapter.forwardMediationInfo()
         VelocityAdsGmaAdapter.runOnMainNow { [weak self] in
             guard let self else {

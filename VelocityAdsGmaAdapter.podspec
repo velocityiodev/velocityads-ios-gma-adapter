@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'VelocityAdsGmaAdapter'
-  s.version          = '0.12.0.0'
+  s.version          = '0.13.0.0'
   s.summary          = 'Google Mobile Ads custom event adapter for the Velocity Ads iOS SDK.'
   s.description      = <<-DESC
     VelocityAdsGmaAdapter bridges the Velocity Ads iOS SDK into the AdMob /
@@ -26,8 +26,8 @@ Pod::Spec.new do |s|
 
   s.source_files     = 'Sources/VelocityAdsGmaAdapter/**/*.swift'
 
-  s.dependency 'Google-Mobile-Ads-SDK', '>= 13.0.0', '< 14.0.0'
-  s.dependency 'VelocityAdsSDK', '~> 0.12.0'
+  s.dependency 'Google-Mobile-Ads-SDK', '>= 13.3.0', '< 14.0.0'
+  s.dependency 'VelocityAdsSDK', '~> 0.13.0'
 
   # Google-Mobile-Ads-SDK ships as a static XCFramework.
   s.static_framework = true

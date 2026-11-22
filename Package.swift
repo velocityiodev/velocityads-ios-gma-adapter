@@ -16,11 +16,11 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/googleads/swift-package-manager-google-mobile-ads",
-            .upToNextMajor(from: "13.0.0")
+            .upToNextMajor(from: "13.3.0")
         ),
         .package(
             url: "https://github.com/velocityiodev/velocityads-ios-sdk",
-            .upToNextMinor(from: "0.12.0")
+            .upToNextMinor(from: "0.13.0")
         )
     ],
     targets: [
