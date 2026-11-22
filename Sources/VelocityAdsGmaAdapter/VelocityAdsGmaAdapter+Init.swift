@@ -37,6 +37,9 @@ extension VelocityAdsGmaAdapter {
     private static var appKeyMismatchLogged = false
 
     #if DEBUG
+    /// Test-only: observes COPPA forwarding without calling the Velocity SDK.
+    static var setIsChildDirectedForTesting: ((Bool) -> Void)?
+
     /// Test-only: replaces the `VelocityAds.initSDK` trigger so unit tests can
     /// drive the coalesced init flow deterministically without network I/O.
     @MainActor
@@ -52,6 +55,7 @@ extension VelocityAdsGmaAdapter {
         activeInitBridge = nil
         storedAppKey = nil
         appKeyMismatchLogged = false
+        setIsChildDirectedForTesting = nil
         initSDKRunnerForTesting = nil
     }
     #endif
@@ -169,6 +173,33 @@ extension VelocityAdsGmaAdapter {
     }
 
     // MARK: - Mediation info
+
+    /// Forwards GMA privacy signals to Velocity before setup or a load.
+    ///
+    /// COPPA is the only GMA privacy signal mapped to a Velocity privacy API here.
+    /// GDPR/CCPA remain GMA/CMP-managed, as documented for this adapter.
+    /// GMA's UNSPECIFIED value must not overwrite a previously supplied Velocity value.
+    static func forwardPrivacySettings() {
+        let isChildDirected: Bool?
+        switch MobileAds.shared.requestConfiguration.ageRestrictedTreatment {
+        case .child:
+            isChildDirected = true
+        case .teen:
+            isChildDirected = false
+        case .unspecified:
+            isChildDirected = nil
+        @unknown default:
+            isChildDirected = nil
+        }
+        guard let isChildDirected else { return }
+        #if DEBUG
+        if let hook = setIsChildDirectedForTesting {
+            hook(isChildDirected)
+            return
+        }
+        #endif
+        VelocityAds.setIsChildDirected(isChildDirected)
+    }
 
     /// One-shot forwarding of the mediation environment to the Velocity SDK. The `static let`
     /// closure gives thread-safe once semantics for free.

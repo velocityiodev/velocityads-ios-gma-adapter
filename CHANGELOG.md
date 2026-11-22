@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0.0] - 2026-11-22
+
+### Changed
+
+* Wraps Velocity Ads iOS SDK 0.13.0.
+* Raised the minimum supported Google Mobile Ads SDK version to 13.3.0.
+
 ## [0.12.0.0] - 2026-11-09
 
 ### Changed

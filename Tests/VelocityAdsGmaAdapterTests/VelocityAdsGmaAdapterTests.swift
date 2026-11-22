@@ -92,6 +92,7 @@ final class VelocityAdsGmaAdapterTests: XCTestCase {
     override func setUp() {
         super.setUp()
         capturedInitDelegates = []
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .unspecified
         // Stub the SDK init trigger: unit tests must never perform real network
         // initialization. Individual tests complete the flow via the captured
         // delegate when they need a terminal outcome.
@@ -102,6 +103,7 @@ final class VelocityAdsGmaAdapterTests: XCTestCase {
 
     override func tearDown() {
         VelocityAdsGmaAdapter.resetInitStateForTesting()
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .unspecified
         capturedInitDelegates = []
         super.tearDown()
     }
@@ -123,6 +125,54 @@ final class VelocityAdsGmaAdapterTests: XCTestCase {
         let expectation = expectation(description: "main queue drained")
         DispatchQueue.main.async { expectation.fulfill() }
         wait(for: [expectation], timeout: 1)
+    }
+
+    // MARK: - COPPA forwarding
+
+    func test_forwardPrivacySettings_forwardsTrueAndFalse_butNotUnknown() {
+        var forwarded: [Bool] = []
+        VelocityAdsGmaAdapter.setIsChildDirectedForTesting = { forwarded.append($0) }
+
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .child
+        VelocityAdsGmaAdapter.forwardPrivacySettings()
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .teen
+        VelocityAdsGmaAdapter.forwardPrivacySettings()
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .unspecified
+        VelocityAdsGmaAdapter.forwardPrivacySettings()
+
+        XCTAssertEqual(forwarded, [true, false])
+    }
+
+    func test_setUp_forwardsCoppaBeforeStartingInitialization() {
+        var events: [String] = []
+        VelocityAdsGmaAdapter.setIsChildDirectedForTesting = { _ in events.append("coppa") }
+        VelocityAdsGmaAdapter.initSDKRunnerForTesting = { [weak self] _, delegate in
+            events.append("init")
+            self?.capturedInitDelegates.append(delegate)
+        }
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .child
+
+        VelocityAdsGmaAdapter.setUp(with: StubServerConfiguration(parameters: [Self.withAppKey])) { _ in }
+        drainMainQueue()
+
+        XCTAssertEqual(events, ["coppa", "init"])
+    }
+
+    func test_supportedLoadPaths_forwardCoppaBeforeInitialization() {
+        var events: [String] = []
+        VelocityAdsGmaAdapter.setIsChildDirectedForTesting = { _ in events.append("coppa") }
+        VelocityAdsGmaAdapter.initSDKRunnerForTesting = { [weak self] _, delegate in
+            events.append("init")
+            self?.capturedInitDelegates.append(delegate)
+        }
+        MobileAds.shared.requestConfiguration.ageRestrictedTreatment = .teen
+        let adapter = VelocityAdsGmaAdapter()
+
+        adapter.loadInterstitial(for: StubInterstitialConfiguration(parameter: Self.withAppKey)) { _, _ in nil }
+        adapter.loadRewardedAd(for: StubRewardedConfiguration(parameter: Self.withAppKey)) { _, _ in nil }
+        adapter.loadBanner(for: StubBannerConfiguration(parameter: Self.withAppKey)) { _, _ in nil }
+
+        XCTAssertEqual(events, ["coppa", "init", "coppa", "coppa"])
     }
 
     // MARK: - setUp — lazy-init contract
